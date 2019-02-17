@@ -27,10 +27,36 @@ func (ts *TimeSeries) UpdateLastCandle(candle *techan.Candle) bool {
 		panic(fmt.Errorf("Error modify Candle: candle cannot be nil"))
 	}
 
-	if candle.Period.Since(ts.LastCandle().Period) != ts.LastCandle().Period.Length() {
-		return false
+	if (ts.LastCandle().Period.Start.Before(candle.Period.Start) || ts.LastCandle().Period.Start.Equal(candle.Period.Start)) &&
+		(ts.LastCandle().Period.End.After(candle.Period.End) || ts.LastCandle().Period.End.Equal(candle.Period.End)) {
+		ts.LastCandle().Volume = ts.LastCandle().Volume.Add(candle.Volume)
+		ts.LastCandle().TradeCount += candle.TradeCount
+		ts.LastCandle().ClosePrice = candle.ClosePrice
+
+		if ts.LastCandle().OpenPrice.Zero() {
+			ts.LastCandle().OpenPrice = candle.OpenPrice
+		}
+
+		if ts.LastCandle().MaxPrice.Zero() {
+			ts.LastCandle().MaxPrice = candle.MaxPrice
+		} else if candle.MaxPrice.GT(ts.LastCandle().MaxPrice) {
+			ts.LastCandle().MaxPrice = candle.MaxPrice
+		}
+
+		if ts.LastCandle().MinPrice.Zero() {
+			ts.LastCandle().MinPrice = candle.MinPrice
+		} else if candle.MinPrice.LT(ts.LastCandle().MinPrice) {
+			ts.LastCandle().MinPrice = candle.MinPrice
+		}
+
+		if ts.LastCandle().Volume.Zero() {
+			ts.LastCandle().Volume = candle.Volume
+		} else {
+			ts.LastCandle().Volume = ts.LastCandle().Volume.Add(candle.Volume)
+		}
+	} else {
+		return ts.AddCandle(candle)
 	}
-	ts.LastCandle() = candle
 	return true
 }
 
